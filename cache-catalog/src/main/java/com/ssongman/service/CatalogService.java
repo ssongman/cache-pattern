@@ -1,5 +1,6 @@
 package com.ssongman.service;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.ssongman.entity.CatalogEntity;
@@ -26,6 +27,8 @@ public class CatalogService{
 		return catalogEntity;
 	}
 
+	@Cacheable(value = "catalog", key = "#productId")
+//	@Cacheable(keyGenerator="customKeyGenerator", value="catalog", key = "#productId")
 	public CatalogEntity getCatalog(String productId) {
 		log.info("[CatalogService.getCatalog], productId = {}", productId);
 		CatalogEntity catalogEntity = repository.findByProductId(productId);
