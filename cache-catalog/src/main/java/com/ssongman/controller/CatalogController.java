@@ -44,7 +44,7 @@ public class CatalogController {
 
     @GetMapping(value="/catalogs")
     public ResponseEntity<List<CatalogResponseModel>> getCatalogs() {
-    	log.info("getCatalogs");
+    	log.info("[CatalogController.getCatalogs]");
         Iterable<CatalogEntity> catalogList = writeBehindService.getAllCatalogs();
         List<CatalogResponseModel> result = new ArrayList<>();
         catalogList.forEach(v -> {
@@ -69,7 +69,7 @@ public class CatalogController {
     
     @GetMapping(value="/catalog/{productId}")
     public ResponseEntity<CatalogResponseModel> getCatalog(@PathVariable("productId") String productId) {
-    	log.info("getCatalogs");
+    	log.info("[CatalogController.getCatalogs]");
     	
     	CatalogEntity catalogEntity = writeBehindService.getCatalog(productId);
         
