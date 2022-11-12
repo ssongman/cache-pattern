@@ -23,3 +23,16 @@ spring:
     initialization-mode: always   # always로 설정시 재기동 될때마다 schema, data 내용들로 초기화
     schema: classpath:h2/schema.sql 
     data: classpath:h2/data.sql
+    
+  redis:
+    lettuce:
+      timeout: 10000    # 10초
+      shutdown-timeout: 100
+      auto-reconnect: false
+      pool:
+        max-active: 1   # pool에 할당할수 있는 커넥션 최대수(default:8)
+        max-idle: 1     # pool의 idle 커넥션 최대수(default:8)
+        min-idle: 0     # pool의 idle 커넥션 최소수(default:0)
+    host: localhost  # 
+    port: 6379
+    
