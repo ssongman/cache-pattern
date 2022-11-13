@@ -26,7 +26,7 @@ spring:
     
   redis:
     lettuce:
-      timeout: 10000    # 10초
+      timeout: 1000    # 10초 --> 1초
       shutdown-timeout: 100
       auto-reconnect: false
       pool:
