@@ -1,8 +1,10 @@
 package com.ssongman.dto;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.redis.core.RedisHash;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -17,6 +19,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
+@RedisHash(value = "catalog", timeToLive = 60L)
 public class CatalogDto {
 
 	private long id;
