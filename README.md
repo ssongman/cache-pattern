@@ -2,6 +2,8 @@
 
 
 
+
+
 # 1. Cache 란?
 
 
@@ -745,19 +747,19 @@ $ curl -X 'GET' \
 
 ```
 처음 조회시
-[CatalogController.getCatalogs]
-[CatalogService.getAllCatalogs]
+[UsersController.getUsers]
+[UsersService.getAllUsers]
 
 두번째 조회시
-[CatalogController.getCatalogs]
-[CatalogService.getAllCatalogs]
+[UsersController.getUsers]
+[UsersService.getAllUsers]
 
 세번째 조회시
-[CatalogController.getCatalogs]
-[CatalogService.getAllCatalogs]
+[UsersController.getUsers]
+[UsersService.getAllUsers]
 ```
 
-로그가 출력되는 소스를 잘 이해하자.  차후 캐쉬 실습시에는 로그그 다르게 표현될 것이다.
+로그가 출력되는 소스를 잘 이해하자.  차후 캐쉬 실습시에는 로그가 다르게 표현될 것이다.
 
 
 
@@ -879,7 +881,7 @@ $ curl -X 'GET' \
 ]
 ```
 
-USER-0004 의 Song 이 Song2 로 변경된 것을 확인할 수 있다.
+USER-0004 의 Lee이 Lee44로 변경된 것을 확인할 수 있다.
 
 
 
@@ -1063,7 +1065,7 @@ import org.springframework.retry.annotation.EnableRetry;
 
 @SpringBootApplication
 @EnableCaching               //   <-- 추가 : Cache 기능 활성화  
-public class CatalogWsApplication {
+public class CacheUsersApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(CatalogWsApplication.class, args);
@@ -1082,7 +1084,7 @@ spring:
   ...
   redis:
     lettuce:
-      timeout: 10000    # 10초
+      timeout: 1000    # 1초
       shutdown-timeout: 100
       auto-reconnect: false
       pool:
@@ -1132,74 +1134,15 @@ public class CacheConfig {
 
 
 
-# 7. annotation을 통한 Caching 사용
+# 7. Annotation을 통한 Caching 사용
 
 - Caching을 사용하기 위해 어노테이션을 사용하여 Caching 동작을 메서드에 바인딩할 수 있다.
 
 
 
-## 1) KeyGenerator
-
-- Cache의 Key를 생성하는 인터페이스이다. 
-
-- Cache에 사용하는 메서드에 대와 파라미터에 기반하여 key를 생성하기 위해 사용된다.
-
-- 스프링에서는 SimpleKeyGenerator를 기본으로 제공한다.
-
-- 별도의 키생성 패턴을 구현 시 아래  KeyGenerator에 대한 구현체를 작성할 수 있다.
 
 
-
-### 실습
-
-- Custom 키 생성기 구현
-
-```java
-import java.lang.reflect.Method;
-import org.springframework.cache.interceptor.KeyGenerator;
-import org.springframework.util.StringUtils;
-
-public class CustomKeyGenerator implements KeyGenerator {
-
-	public Object generate(Object target, Method method, Object... params) {
-		return target.getClass().getSimpleName() + "_" + method.getName() + "_"
-				+ StringUtils.arrayToDelimitedString(params, "_");
-	}
-}
-```
-
-- 빈 등록
-  - CacheConfig 파일에 추가한다.
-
-```java
-	@Bean("customKeyGenerator")
-	public KeyGenerator keyGenerator() {
-		return new CustomKeyGenerator();
-	}
-```
-
-- 사용
-
-```java
-@Cacheable(keyGenerator="customKeyGenerator", value="catalog")
-public String getCatalog(String productId) {...}
-```
-
-
-
-[쏭맨]  이렇게 테스트 하니 redis 에 데이터가 쌓이지 않는다.  
-
-Cache 로 Redis 를 사용하겠다는 설정은 어디서 하는가???
-
-
-
-
-
-
-
-
-
-## 2) @Cacheable
+## 1) @Cacheable
 
 - 메소드에 대한 Caching 동작을 활성화하는 가장 간단한 방법은 *@Cacheable* 로 구분 하고 결과가 저장될 캐시 이름으로 매개변수화 한다.
 
@@ -1232,18 +1175,42 @@ public String getCatalog(String productId) {...}
 
 
 
-### 실습1. catalog Cache 반영
+### 실습1. users Cache 반영
 
 ####  task1. Cache 반영전 로그 확인
 
-catalog Cache 반영전 조회되는 로그를 먼저 확인해 보자.
+Cache 반영전 조회되는 로그를 먼저 확인해 보자.
 
-- GET /catalog/USER-0002
+- GET /users-ms/users
 
 ```sh
 curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalogs' \
+  'http://localhost:8080/users-ms/users' \
   -H 'accept: */*'
+  
+[
+  {
+    "userId": "USER-0001",
+    "userName": "Song",
+    "age": 50,
+    "height": 175,
+    "createdAt": "2022-11-15"
+  },
+  {
+    "userId": "USER-0002",
+    "userName": "Kim",
+    "age": 55,
+    "height": 180,
+    "createdAt": "2022-11-15"
+  },
+  {
+    "userId": "USER-0003",
+    "userName": "Lee",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
+  }
+]
 ```
 
 
@@ -1252,23 +1219,23 @@ curl -X 'GET' \
 
 ```
 처음 조회시
-[CatalogController.getCatalogs]
-[CatalogService.getAllCatalogs]
+[UsersController.getUsers]
+[UsersService.getAllUsers]
 
 두번째 조회시
-[CatalogController.getCatalogs]
-[CatalogService.getAllCatalogs]
+[UsersController.getUsers]
+[UsersService.getAllUsers]
 
 세번째 조회시
-[CatalogController.getCatalogs]
-[CatalogService.getAllCatalogs]
+[UsersController.getUsers]
+[UsersService.getAllUsers]
 ```
 
 Controller 와 Service 로그가 모두 출력되는것을 확인 할 수 있다.
 
 
 
-#### task2. Cacheable 반영
+#### task2. Cacheable 소스 반영
 
 catalog Cache 반영하는 방법에 대해서 확인해보자.
 
@@ -1276,23 +1243,48 @@ catalog Cache 반영하는 방법에 대해서 확인해보자.
 
 ```java
     
-public class CatalogService{
+public class UsersService{
 	...	
-	@Cacheable(value = "catalog")     // <-- 추가
-	public Iterable<CatalogEntity> getAllCatalogs() {
-		log.info("[CatalogService.getAllCatalogs]");
+        
+	@Cacheable(value = "users")     // <-- 추가
+	public Iterable<UsersEntity> getAllUsers() {
+		log.info("[UsersService.getAllUsers]");
 		return repository.findAll();
 	}
 ```
 
 
 
-- GET /catalog/USER-0002
+- GET /users-ms/users
 
 ```sh
 curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalogs' \
+  'http://localhost:8080/users-ms/users' \
   -H 'accept: */*'
+  
+[
+  {
+    "userId": "USER-0001",
+    "userName": "Song",
+    "age": 50,
+    "height": 175,
+    "createdAt": "2022-11-15"
+  },
+  {
+    "userId": "USER-0002",
+    "userName": "Kim",
+    "age": 55,
+    "height": 180,
+    "createdAt": "2022-11-15"
+  },
+  {
+    "userId": "USER-0003",
+    "userName": "Lee",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
+  }
+]
 ```
 
 
@@ -1301,14 +1293,14 @@ curl -X 'GET' \
 
 ```
 처음 조회시
-[CatalogController.getCatalogs]
-[CatalogService.getAllCatalogs]
+[UsersController.getUsers]
+[UsersService.getAllUsers]
 
 두번째 조회시
-[CatalogController.getCatalogs]
+[UsersController.getUsers]
 
 세번째 조회시
-[CatalogController.getCatalogs]
+[UsersController.getUsers]
 ```
 
 ​	첫 조회시 Controller 와 Service 로그가 모두 출력되며 그 이후에는 Service 로그가 출력되지 않는 것을 확인 할 수 있다.
@@ -1319,7 +1311,7 @@ curl -X 'GET' \
 
 - redis insight 확인
 
-Redis 에서 key를 확인해 보자.  "**catalog::SimpleKey []**" 라는 값으로 key 가 확인될 것이다.
+Redis 에서 key를 확인해 보자.  "**users::SimpleKey []**" 라는 값으로 key 가 확인될 것이다.
 
 해당 key를 삭제후 다시 조회 시도해 보면서 전체적인 흐름을 이해하자.
 
@@ -1327,22 +1319,66 @@ Redis 에서 key를 확인해 보자.  "**catalog::SimpleKey []**" 라는 값으
 
 
 
-catalog 전체 값이 아닌 특정 Key 값으로 읽어드리는 Cache 사례를 살펴보자.
+users 전체 값이 아닌 특정 Key 값으로 읽어드리는 Cache 사례를 살펴보자.
 
-### 실습2. catalog:productId cache
+### 실습2. users:userId cache
 
-#### task1. Cacheable반영 소스추가
+####  task1. Cache 반영전 로그 확인
+
+Cache 반영전 조회되는 로그를 먼저 확인해 보자.
+
+- GET /users-ms/USER-0002
+
+```sh
+curl -X 'GET' \
+  'http://localhost:8080/users-ms/user/USER-0002' \
+  -H 'accept: */*'
+  
+{
+  "userId": "USER-0002",
+  "userName": "Kim",
+  "age": 55,
+  "height": 180,
+  "createdAt": "2022-11-15"
+}
+```
+
+
+
+- 조회시 로그 확인
+
+```
+처음 조회시
+[UsersController.getUser]
+[UsersService.deleteUser], userId = USER-0002
+
+두번째 조회시
+[UsersController.getUser]
+[UsersService.deleteUser], userId = USER-0002
+
+세번째 조회시
+[UsersController.getUser]
+[UsersService.deleteUser], userId = USER-0002
+```
+
+Controller 와 Service 로그가 모두 출력되는것을 확인 할 수 있다.
+
+
+
+
+
+#### task2. Cacheable반영 소스추가
 
 - 소스추가
 
 ```java
-public class CatalogService{
+public class UsersService{
     ...
-	@Cacheable(value = "catalog", key = "#productId")     // <-- 추가
-	public CatalogEntity getCatalog(String productId) {
-		log.info("[CatalogService.getCatalog], productId = {}", productId);
-		CatalogEntity catalogEntity = repository.findByProductId(productId);
-		return catalogEntity;
+	@Cacheable(value = "users", key = "#userId")     // <-- 추가
+	public UsersEntity getUser(String userId) {
+		log.info("[UsersService.deleteUser], userId = {}", userId);
+		UsersEntity usersEntity = repository.findByUserId(userId);
+		return usersEntity;
 	}
 ```
 
@@ -1350,8 +1386,16 @@ public class CatalogService{
 
 ```sh
 curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0002' \
+  'http://localhost:8080/users-ms/user/USER-0002' \
   -H 'accept: */*'
+  
+{
+  "userId": "USER-0002",
+  "userName": "Kim",
+  "age": 55,
+  "height": 180,
+  "createdAt": "2022-11-15"
+}
 ```
 
 조회를 여러번 시도해 보자.
@@ -1360,21 +1404,21 @@ curl -X 'GET' \
 
 ```
 처음 조회시
-[CatalogController.getCatalogs]
-[CatalogService.getCatalog], productId = USER-0002
+[UsersController.getUser]
+[UsersService.deleteUser], userId = USER-0002
 
 두번째 조회시
-[CatalogController.getCatalogs]
+[UsersController.getUser]
 
 세번째 조회시
-[CatalogController.getCatalogs]
+[UsersController.getUser]
 ```
 
 첫번째 조회시 Service Code 를 수행후 Caching 하고 이후부터는 Service Code 가 실행되지 않고 Cache 에서 데이터를 가져오는 것을 알 수 있다.
 
 - redis insight 확인
 
-Redis 에서 key를 확인해 보자.  "catalog::USER-0002" 라는 값으로 key 가 확인될 것이다.
+Redis 에서 key를 확인해 보자.  "users::USER-0002" 라는 값으로 key 가 확인될 것이다.
 
 해당 key를 삭제후 다시 조회 시도해 보면서 전체적인 흐름을 이해하자.
 
@@ -1384,18 +1428,19 @@ Redis 에서 key를 확인해 보자.  "catalog::USER-0002" 라는 값으로 key
 
 
 
-## 3) @CacheEvict
+## 2) @CacheEvict
 
 - 자주 필요하지 않은 값으로 캐시를 채울 경우 캐시는 상당히 크고 빠르게 증가할 수 있으며 오래되거나 사용되지 않는 데이터를 많이 보유할 수 있다. 
 - 이 경우 새로운 값을 캐시에 다시 로드할 수 있도록 @CacheEvict 주석을 사용하여 하나 이상의 모든 값을 제거 할 수 있다.
 
 ```java
-@CacheEvict(value="catalog", allEntries=true)
-public String getCatalog(String productId) {...}
+@CacheEvict(value="users", allEntries=true)
+public String getUser(String userId) {...}
 
 
-@CacheEvict(value = "catalog", key = "#productId")
-public String getCatalog(String productId) {...}
+@CacheEvict(value = "users", key = "#userId")
+public String getUser(String userId) {...}
+        
 ```
 
 - 여기서 비울 캐시와 함께 *allEntries 추가 매개변수를 사용한다.* 이렇게 하면 캐시 *주소* 의 모든 항목이 지워지고 새 데이터를 위해 준비된다.
@@ -1428,30 +1473,30 @@ catalog 내 특정 값을 추가해보자. 추가된 값이 반영되지 않을 
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalogs' \
+  'http://localhost:8080/users-ms/users' \
   -H 'accept: */*'
 
 [
   {
-    "productId": "USER-0001",
-    "productName": "Berlin",
-    "stock": 100,
-    "unitPrice": 1500,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0001",
+    "userName": "Song",
+    "age": 50,
+    "height": 175,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0002",
-    "productName": "Tokyo",
-    "stock": 100,
-    "unitPrice": 900,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0002",
+    "userName": "Kim",
+    "age": 55,
+    "height": 180,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0003",
-    "productName": "Stockholm",
-    "stock": 100,
-    "unitPrice": 1200,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0003",
+    "userName": "Lee",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
   }
 ]
 ```
@@ -1462,15 +1507,15 @@ $ curl -X 'GET' \
 
 ```sh
 $ curl -X 'POST' \
-  'http://localhost:8080/catalog-ms/catalog' \
+  'http://localhost:8080/users-ms/user' \
   -H 'accept: */*' \
   -H 'Content-Type: application/json' \
   -d '{
-  "productId": "USER-0004",
-  "productName": "Song",
-  "stock": 100,
-  "unitPrice": 1200
-}'
+    "userId": "USER-0004",
+    "userName": "Lee44",
+    "age": 60,
+    "height": 185
+  }'
 ```
 
 잘 추가 되었는지 DB 에서도 확인해 보자.
@@ -1483,45 +1528,49 @@ http://localhost:8080/h2-console
 SELECT * FROM CATALOG;
 ```
 
-| [ID ](http://localhost:8080/h2-console/query.do?jsessionid=9f8f519eaaff92de62a3c9394ca92640#) | [PRODUCT_ID ](http://localhost:8080/h2-console/query.do?jsessionid=9f8f519eaaff92de62a3c9394ca92640#) | [PRODUCT_NAME ](http://localhost:8080/h2-console/query.do?jsessionid=9f8f519eaaff92de62a3c9394ca92640#) | [STOCK ](http://localhost:8080/h2-console/query.do?jsessionid=9f8f519eaaff92de62a3c9394ca92640#) | [UNIT_PRICE ](http://localhost:8080/h2-console/query.do?jsessionid=9f8f519eaaff92de62a3c9394ca92640#) | [CREATED_AT ](http://localhost:8080/h2-console/query.do?jsessionid=9f8f519eaaff92de62a3c9394ca92640#) |
+
+
+| [ID ](http://localhost:8080/h2-console/query.do?jsessionid=f3421148ec1a0c34a37867229ec5ed13#) | [USER_ID ](http://localhost:8080/h2-console/query.do?jsessionid=f3421148ec1a0c34a37867229ec5ed13#) | [USER_NAME ](http://localhost:8080/h2-console/query.do?jsessionid=f3421148ec1a0c34a37867229ec5ed13#) | [AGE ](http://localhost:8080/h2-console/query.do?jsessionid=f3421148ec1a0c34a37867229ec5ed13#) | [HEIGHT ](http://localhost:8080/h2-console/query.do?jsessionid=f3421148ec1a0c34a37867229ec5ed13#) | [CREATED_AT ](http://localhost:8080/h2-console/query.do?jsessionid=f3421148ec1a0c34a37867229ec5ed13#) |
 | :----------------------------------------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- | :----------------------------------------------------------- |
-| 1                                                            | USER-0001                                                    | Berlin                                                       | 100                                                          | 1500                                                         | 2022-11-13                                                   |
-| 2                                                            | USER-0002                                                    | Tokyo                                                        | 100                                                          | 900                                                          | 2022-11-13                                                   |
-| 3                                                            | USER-0003                                                    | Stockholm                                                    | 100                                                          | 1200                                                         | 2022-11-13                                                   |
-| 4                                                            | USER-0004                                                    | Song                                                         | 100                                                          | 1200                                                         | 2022-11-13                                                   |
+| 1                                                            | USER-0001                                                    | Song                                                         | 50                                                           | 175                                                          | 2022-11-15                                                   |
+| 2                                                            | USER-0002                                                    | Kim                                                          | 55                                                           | 180                                                          | 2022-11-15                                                   |
+| 3                                                            | USER-0003                                                    | Lee                                                          | 60                                                           | 185                                                          | 2022-11-15                                                   |
+| 4                                                            | USER-0004                                                    | Lee44                                                        | 60                                                           | 185                                                          | 2022-11-15                                                   |
+
+
 
 DB 에서는 잘 추가 되었다.
 
 API 로 확인해보자.
 
-- 조회 :  GET  /catalog-ms/catalogs
+- 조회 :  GET  /users-ms/users
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalogs' \
+  'http://localhost:8080/users-ms/users' \
   -H 'accept: */*'
 
 [
   {
-    "productId": "USER-0001",
-    "productName": "Berlin",
-    "stock": 100,
-    "unitPrice": 1500,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0001",
+    "userName": "Song",
+    "age": 50,
+    "height": 175,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0002",
-    "productName": "Tokyo",
-    "stock": 100,
-    "unitPrice": 900,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0002",
+    "userName": "Kim",
+    "age": 55,
+    "height": 180,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0003",
-    "productName": "Stockholm",
-    "stock": 100,
-    "unitPrice": 1200,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0003",
+    "userName": "Lee",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
   }
 ]
 ```
@@ -1532,7 +1581,7 @@ $ curl -X 'GET' \
 
 왜 이런 현상이 발생할까?
 
-getAllCatalogs() method 에서 catalog data 를 읽어 오는데 Cache 에 해당 데이터가 존재했으므로 값을 가져왔으나 update 가 안되어서 이전값을 가져왔다.
+getAllUsers() method 에서 data 를 읽어 오는데 Cache 에 해당 데이터가 존재했으므로 값을 가져왔으나 update 가 안되어서 이전값을 가져왔다.
 
 Cache 를 적절히 사용하지 못하면 이런 현상이 발생하므로 주의해야 한다.
 
@@ -1540,7 +1589,7 @@ Cache 를 적절히 사용하지 못하면 이런 현상이 발생하므로 주�
 
 Data 수정이 발생할때 Cache 의 내용도 Update 하거나 아예 Cache 를 삭제할 수도 있다.
 
-아래 예제는 Catalog Data 수정시 Cache 를 삭제하는 실습을 진행해 보자.
+아래 예제는 Data 수정시 Cache 를 삭제하는 실습을 진행해 보자.
 
 
 
@@ -1551,13 +1600,13 @@ Data 수정이 발생할때 Cache 의 내용도 Update 하거나 아예 Cache �
 
 
 ```java
-public class CatalogService{
+public class UsersService{
     ...
-	@CacheEvict(value="catalog", allEntries=true)      // <-- 추가
-	public CatalogEntity setCatalog(CatalogEntity catalogEntity){
-		log.info("[CatalogService.setCatalog], catalogEntity = {}", catalogEntity);
-		repository.save(catalogEntity);
-		return catalogEntity;
+	@CacheEvict(value="users", allEntries=true)      // <-- 추가
+	public UsersEntity setUser(UsersEntity userEntity){
+		log.info("[UsersService.setUser], userEntity = {}", userEntity);
+		repository.save(userEntity);
+		return userEntity;
 	}
 ```
 
@@ -1569,51 +1618,51 @@ tomcat 재기동 후 다시 시도해 보자.
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalogs' \
+  'http://localhost:8080/users-ms/users' \
   -H 'accept: */*'
 
 [
   {
-    "productId": "USER-0001",
-    "productName": "Berlin",
-    "stock": 100,
-    "unitPrice": 1500,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0001",
+    "userName": "Song",
+    "age": 50,
+    "height": 175,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0002",
-    "productName": "Tokyo",
-    "stock": 100,
-    "unitPrice": 900,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0002",
+    "userName": "Kim",
+    "age": 55,
+    "height": 180,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0003",
-    "productName": "Stockholm",
-    "stock": 100,
-    "unitPrice": 1200,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0003",
+    "userName": "Lee",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
   }
 ]
 ```
 
 
 
-- 추가 : POST /catalog-ms/catalog
+- 추가 : POST /users-ms/user
 
 아래 명령수행시 Cache 가 삭제 될 것이다.
 
 ```sh
 $ curl -X 'POST' \
-  'http://localhost:8080/catalog-ms/catalog' \
+  'http://localhost:8080/users-ms/user' \
   -H 'accept: */*' \
   -H 'Content-Type: application/json' \
   -d '{
-  "productId": "USER-0004",
-  "productName": "Song",
-  "stock": 100,
-  "unitPrice": 1200
-}'
+    "userId": "USER-0004",
+    "userName": "Lee44",
+    "age": 60,
+    "height": 185
+  }'
 ```
 
 ​	명령 수행후 Redis Key 를 확인해 보자.
@@ -1624,36 +1673,37 @@ $ curl -X 'POST' \
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalogs' \
+  'http://localhost:8080/users-ms/users' \
   -H 'accept: */*'
+
 [
   {
-    "productId": "USER-0001",
-    "productName": "Berlin",
-    "stock": 100,
-    "unitPrice": 1500,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0001",
+    "userName": "Song",
+    "age": 50,
+    "height": 175,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0002",
-    "productName": "Tokyo",
-    "stock": 100,
-    "unitPrice": 900,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0002",
+    "userName": "Kim",
+    "age": 55,
+    "height": 180,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0003",
-    "productName": "Stockholm",
-    "stock": 100,
-    "unitPrice": 1200,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0003",
+    "userName": "Lee",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0004",
-    "productName": "Song",
-    "stock": 100,
-    "unitPrice": 1200,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0004",
+    "userName": "Lee44",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
   }
 ]
 ```
@@ -1673,10 +1723,16 @@ $ curl -X 'GET' \
 - 소스 추가 : Controller 에서 refresh  코드를 추가한다.
 
 ```java
+
+public class UsersController {
+    
+	...
+        
+    // 아래 소스 추가
     @GetMapping("/refresh")
-	@CacheEvict(value="catalog", allEntries=true)
+	@CacheEvict(value="users", allEntries=true)
     public String refresh() {
-        return "Cache refresh completed!";
+        return "Cache refresh was completed!";
     }
 ```
 
@@ -1688,30 +1744,37 @@ $ curl -X 'GET' \
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalogs' \
+  'http://localhost:8080/users-ms/users' \
   -H 'accept: */*'
 
 [
   {
-    "productId": "USER-0001",
-    "productName": "Berlin",
-    "stock": 100,
-    "unitPrice": 1500,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0001",
+    "userName": "Song",
+    "age": 50,
+    "height": 175,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0002",
-    "productName": "Tokyo",
-    "stock": 100,
-    "unitPrice": 900,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0002",
+    "userName": "Kim",
+    "age": 55,
+    "height": 180,
+    "createdAt": "2022-11-15"
   },
   {
-    "productId": "USER-0003",
-    "productName": "Stockholm",
-    "stock": 100,
-    "unitPrice": 1200,
-    "createdAt": "2022-11-13"
+    "userId": "USER-0003",
+    "userName": "Lee",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
+  },
+  {
+    "userId": "USER-0004",
+    "userName": "Lee44",
+    "age": 60,
+    "height": 185,
+    "createdAt": "2022-11-15"
   }
 ]
 ```
@@ -1727,7 +1790,7 @@ $ curl -X 'GET' \
   'http://localhost:8080/catalog-ms/refresh' \
   -H 'accept: */*'
 
-Cache refresh completed!
+Cache refresh was completed!
 ```
 
 ​	Redis insight 확인해 보면 catalog::SimpleKey [] 가 삭제된 것을 확인 할 수 있다.
@@ -1736,13 +1799,13 @@ Cache refresh completed!
 
 
 
-## 4) @CachePut
+## 3) @CachePut
 
 - *@CacheEvict* 가 오래되고 사용되지 않는 항목을 제거하여 대용량 캐시에서 항목을 조회하는 오버헤드를 줄이는 동안 캐시에서 너무 많은 데이터를 제거하는 것을 방지할 필요성이 있을 경우 *@CachePut* 주석을 사용 하면 메서드 실행을 방해하지 않고 캐시 내용을 업데이트할 수 있다.
 
 ```java
-@CachePut(value = "catalog", key = "#productId")
-public String getCatalog(String productId) {...}
+@CachePut(value = "users", key = "#userId")
+public String putUser(String userId) {...}
 ```
 
 - *@Cacheable* 과 *@CachePut* 의 차이점은 @Cacheable은 *메서드* 실행 을 **건너뛰지** 만 *@CachePut* 은 **실제로 메서드** 를 실행한 다음 그 결과를 캐시에 저장한다는 것이다.
@@ -1772,34 +1835,34 @@ USER-0003 의 productName을 수정하였으나 Cache 반영이 되지 않아 �
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0003' \
+  'http://localhost:8080/users-ms/user/USER-0003' \
   -H 'accept: */*'
   
 {
-  "productId": "USER-0003",
-  "productName": "Stockholm",
-  "stock": 100,
-  "unitPrice": 1200,
-  "createdAt": "2022-11-13T03:50:02.464+00:00"
+  "userId": "USER-0003",
+  "userName": "Lee",
+  "age": 60,
+  "height": 185,
+  "createdAt": "2022-11-15"
 }
 ```
 
 
 
-- 수정:  productName을 Stockholm3 으로 수정
+- 수정:  userName 을  Park 으로 수정
 
-PATCH /catalog-ms/catalog
+PATCH /users-ms/user
 
 ```sh
 $ curl -X 'PATCH' \
-  'http://localhost:8080/catalog-ms/catalog' \
+  'http://localhost:8080/users-ms/user' \
   -H 'accept: */*' \
   -H 'Content-Type: application/json' \
   -d '{
-  "productId": "USER-0003",
-  "productName": "Stockholm3",
-  "stock": 100,
-  "unitPrice": 1200
+  "userId": "USER-0003",
+  "userName": "Park",
+  "age": 60,
+  "height": 185
 }'
 ```
 
@@ -1809,21 +1872,23 @@ $ curl -X 'PATCH' \
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0003' \
+  'http://localhost:8080/users-ms/user/USER-0003' \
   -H 'accept: */*'
   
 {
-  "productId": "USER-0003",
-  "productName": "Stockholm",
-  "stock": 100,
-  "unitPrice": 1200,
-  "createdAt": "2022-11-13T03:50:02.464+00:00"
+  "userId": "USER-0003",
+  "userName": "Lee",
+  "age": 60,
+  "height": 185,
+  "createdAt": "2022-11-15"
 }
 ```
 
-productName을 Stockholm3 으로 수정했음에도 Stockholm 로 조회된다.
+userName 을  Park 으로 수정했음에도 Lee 로 조회된다.
 
-Cache 를 적절히 사용하지 못하면 이런 현상이 발생한다. 어떻게 해결할 수 있을까?
+Cache 를 적절히 사용하지 못하면 이런 현상이 발생한다. 
+
+어떻게 해결할 수 있을까?
 
 
 
@@ -1836,13 +1901,13 @@ Cache 를 적절히 사용하지 못하면 이런 현상이 발생한다. 어떻
 아래와 같이 catalog 를 추가할때 cashe 를 삭제한다.
 
 ```java
-public class CatalogService{
+public class UsersService{
     ...
-	@CachePut(value = "catalog", key = "#catalogEntity.productId")      // <-- 추가
-	public CatalogEntity putCatalog(CatalogEntity catalogEntity){
-		log.info("[CatalogService.setCatalog], catalogEntity = {}", catalogEntity);
-		repository.save(catalogEntity);
-		return catalogEntity;
+	@CachePut(value = "users", key = "#userEntity.userId")      // <-- 추가    
+	public UsersEntity putUser(UsersEntity userEntity){
+		log.info("[UsersService.putUser], userEntity = {}", userEntity);
+		repository.save(userEntity);
+		return userEntity;
 	}
 ```
 
@@ -1850,38 +1915,38 @@ public class CatalogService{
 
 위 소스 수정후 다시 시도해 보자.
 
-- 조회 : GET  /catalog-ms/catalogs
+- 조회 : GET /users-ms/user/USER-0003
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0003' \
+  'http://localhost:8080/users-ms/user/USER-0003' \
   -H 'accept: */*'
   
 {
-  "productId": "USER-0003",
-  "productName": "Stockholm",
-  "stock": 100,
-  "unitPrice": 1200,
-  "createdAt": "2022-11-13T03:50:02.464+00:00"
+  "userId": "USER-0003",
+  "userName": "Lee",
+  "age": 60,
+  "height": 185,
+  "createdAt": "2022-11-15"
 }
 ```
 
 
 
-- 수정:  productName을 Stockholm4 으로 수정
+- 수정:  userName 을  Park 으로 수정
 
-PATCH /catalog-ms/catalog
+PATCH /users-ms/user
 
 ```sh
 $ curl -X 'PATCH' \
-  'http://localhost:8080/catalog-ms/catalog' \
+  'http://localhost:8080/users-ms/user' \
   -H 'accept: */*' \
   -H 'Content-Type: application/json' \
   -d '{
-  "productId": "USER-0003",
-  "productName": "Stockholm4",
-  "stock": 100,
-  "unitPrice": 1200
+  "userId": "USER-0003",
+  "userName": "Park",
+  "age": 60,
+  "height": 185
 }'
 ```
 
@@ -1891,41 +1956,41 @@ $ curl -X 'PATCH' \
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0003' \
+  'http://localhost:8080/users-ms/user/USER-0003' \
   -H 'accept: */*'
   
 {
-  "productId": "USER-0003",
-  "productName": "Stockholm4",
-  "stock": 100,
-  "unitPrice": 1200,
-  "createdAt": "2022-11-13T03:50:02.464+00:00"
+  "userId": "USER-0003",
+  "userName": "Park ",
+  "age": 60,
+  "height": 185,
+  "createdAt": "2022-11-15"
 }
 ```
 
-productName을 Stockholm3 으로 수정된 Stockholm4 가 잘 조회 된다.
+userName 을  Park 으로 잘 조회 된다.
 
 
 
 
 
-## 5) @Caching
+## 4) @Caching
 
 - 메서드를 Caching하기 위해 동일한 유형의 여러 어노테이션을 사용할 경우 아래와 같이 사용하는 것은 허용하지 않는다.
 
 ```java
-@CacheEvict("catalog")
-@CacheEvict(value="catalog2", key="#productId")
-public String getCatalog(String productId) {...}
+@CacheEvict("users")
+@CacheEvict(value="users2", key="#userId")
+public String getUser(String userId) {...}
 ```
 
 - 그럴경우 아래와 같이 Caching관련 어노테이션을 그룹화하는 @Caching을 사용해야 한다.
 
 ```java
 @Caching(evict = { 
-  @CacheEvict("catalog"), 
-  @CacheEvict(value="catalog2", key="#productId") })
-public String getCatalog(String productId) {...}
+  @CacheEvict("users"), 
+  @CacheEvict(value="users2", key="#userId") })
+public String getUser(String userId) {...}
 ```
 
 ### Optional Element
@@ -1941,16 +2006,16 @@ public String getCatalog(String productId) {...}
 
 
 
-## 6) @CacheConfig
+## 5) @CacheConfig
 
 - *@CacheConfig* 주석을 사용하면 캐시 구성의 일부를 클래스 수준의 단일 위치로 간소화할 수 있으므로 **여러** 번 선언할 필요가 없다.
 
 ```java
-@CacheConfig(cacheNames={"catalog"})
+@CacheConfig(cacheNames={"users"})
 public class CustomerDataService {
 
     @Cacheable
-    public String getCatalog(String productId) {...}
+    public String getUser(String userId) {...}
 ```
 
 ###  Optional Element
@@ -1962,13 +2027,13 @@ public class CustomerDataService {
 
 
 
-## 7)  조건부 Caching
+## 6)  조건부 Caching
 
 - 경우에 따라 모든 상황에서 메서드에 대해 Caching이 제대로 작동하지 않을 수 있으며 이 경우 조건부 Caching을 활용하여 효과적인 캐쉬를 사용할 수 있다.
 
 ```java
-@CachePut(value="catalog")
-public String getCatalog(String productId) {...}
+@CachePut(value="users")
+public String getUser(String userId) {...}
 ```
 
 - 조건 매개변수
@@ -1976,8 +2041,8 @@ public String getCatalog(String productId) {...}
 주석이 활성화될 때 더 많은 제어를 원하면 SpEL 표현식을 사용하고 해당 표현식 평가를 기반으로 결과가 캐시되도록 하는 조건 매개 변수로 *@CachePut 을 매개변수화할 수 있다.*
 
 ```java
-@CachePut(value="catalog", condition="#productId == 'CATALOG-001'")
-public String getCatalog(String productId) {...}
+@CachePut(value="users", condition="#productId == 'CATALOG-001'")
+public String getUser(String userId) {...}
 ```
 
 - 매개변수가 아닌 경우
@@ -1985,8 +2050,8 @@ public String getCatalog(String productId) {...}
 *if* 매개변수 를 통한 **입력이 아닌 메소드의 출력을 기반으로** Caching을 제어할 수 있다.
 
 ```java
-@CachePut(value="catalog", unless="#result == null")
-public String getCatalog(String projectId) {...}
+@CachePut(value="users", unless="#result == null")
+public String getUser(String userId) {...}
 ```
 
 - 위의 코드는 null 이 Caching 안되도록 사용한 예이다.
@@ -1994,7 +2059,7 @@ public String getCatalog(String projectId) {...}
 
 
 
-## 8) 장애 처리
+## 7) 장애 처리
 
 - 레디스가 동작하지 않는 동안에는 캐시가 아닌 DB 에서 조회 하도록 fallback 기능이 있어야 한다.
 - spring-retry 의 @Retryable 과 @Recover 를 사용하면 된다.
@@ -2050,17 +2115,17 @@ public class CatalogWsApplication {
 
 
 
-#### 실습
+### 실습. 장애 상황 확인
 
 
 
-##### task1. Redis 서버 장애시 현상 확인
+#### task1. Redis 서버 장애시 현상 확인
 
 - 조회
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0002' \
+  'http://localhost:8080/users-ms/user/USER-0003' \
   -H 'accept: */*'
 ```
 
@@ -2071,7 +2136,7 @@ $ curl -X 'GET' \
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0002' \
+  'http://localhost:8080/users-ms/user/USER-0003' \
   -H 'accept: */*'
 ```
 
@@ -2083,7 +2148,7 @@ Redis Connect 시도하다 실패하면서 조회되지 않는다.
 
 
 
-##### task2. 장애 대응 소스코드 추가
+#### task2. 장애 대응 소스코드 추가
 
 - pom.xml 에 의존성 추가
 
@@ -2100,15 +2165,15 @@ Redis Connect 시도하다 실패하면서 조회되지 않는다.
 		</dependency>
 ```
 
-- CacheCatalogApplication.java 파일에서 Retry 활성화
+- CacheUsersApplication.java 파일에서 Retry 활성화
 
 ```java
 @SpringBootApplication
 @EnableRetry //Retry 활성화
-public class CatalogWsApplication {
+public class CacheUsersApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(CatalogWsApplication.class, args);
+        SpringApplication.run(CacheUsersApplication.class, args);
     }
 
 }
@@ -2117,48 +2182,35 @@ public class CatalogWsApplication {
 - 소스코드 수정
 
 ```java
-public class CatalogService{
+public class UsersService{
     ...
         
 	@Retryable(maxAttempts = 1)   // <-- 추가
-	@Cacheable(value = "catalog", key = "#productId")
-	public CatalogEntity getCatalog(String productId) {
-		log.info("Cache Miss = {}", productId);
-		CatalogEntity catalogEntity = catalogRepository.findByProductId(productId);
-		return catalogEntity;
+	@Cacheable(value = "users", key="#userId")     // <-- 추가
+	public UsersEntity getUser(String userId) {
+		log.info("[UsersService.deleteUser], userId = {}", userId);
+		UsersEntity usersEntity = repository.findByUserId(userId);
+		return usersEntity;
 	}
-	
+
     // 아래 getCatalog() 추가
 	@Recover
-	public CatalogEntity getCatalog(Exception e, String productId) {
-		log.info("Fallback Cache = {}", productId);
-		CatalogEntity catalogEntity = catalogRepository.findByProductId(productId);
-		return catalogEntity;
+	public UsersEntity getUser(Exception e, String userId) {
+		log.info("[UsersService.deleteUser], Fallback Cache, userId = {}", userId);
+		UsersEntity usersEntity = repository.findByUserId(userId);
+		return usersEntity;
 	}
 ```
 
 
 
-- application.yml  수정 - redis timeout
-
-```yaml
-  ...
-  redis:
-    lettuce:
-      timeout: 1000     // 1초로 수정
-```
-
-Redis timeout 시간을 짧게 가져가야  Fallback 처리의 의미가 있다.
-
-
-
-##### task3. Redis 장애 발생시 cache확인
+#### task3. Redis 장애 발생시 cache확인
 
 - 조회
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0002' \
+  'http://localhost:8080/users-ms/user/USER-0003' \
   -H 'accept: */*'
 ```
 
@@ -2169,15 +2221,15 @@ $ curl -X 'GET' \
 
 ```sh
 $ curl -X 'GET' \
-  'http://localhost:8080/catalog-ms/catalog/USER-0002' \
+  'http://localhost:8080/users-ms/user/USER-0003' \
   -H 'accept: */*'
-
+  
 {
-  "productId": "USER-0002",
-  "productName": "Tokyo",
-  "stock": 100,
-  "unitPrice": 900,
-  "createdAt": "2022-11-13"
+  "userId": "USER-0003",
+  "userName": "Lee",
+  "age": 60,
+  "height": 185,
+  "createdAt": "2022-11-15"
 }
 ```
 
@@ -2186,9 +2238,8 @@ $ curl -X 'GET' \
 로그를 확인해 보자.
 
 ```
-[CatalogController.getCatalogs]
-[CatalogService.getCatalog], Fallback Cache, productId = USER-0002
-[CatalogController.getCatalogs] Duration Time : 10ms
+[UsersController.getUser]
+[UsersService.deleteUser], Fallback Cache, userId = USER-0003
 ```
 
 redis 서버 장애시에는 Fallback cache 처리가 되어 DB 에서 직접 읽어오는 것을 확인할 수 있다.

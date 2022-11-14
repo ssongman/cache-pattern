@@ -1,5 +1,6 @@
 package com.kt.cache.entity;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import org.springframework.data.annotation.Id;
@@ -19,7 +20,7 @@ import lombok.ToString;
 @NoArgsConstructor
 @ToString
 @Table("USERS")
-public class UsersEntity {
+public class UsersEntity  implements Serializable {
     @Id
     private long id;
 

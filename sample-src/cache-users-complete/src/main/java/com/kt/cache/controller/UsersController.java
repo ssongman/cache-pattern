@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -37,6 +38,12 @@ public class UsersController {
     @GetMapping("/")
     public String health() {
         return "Hi, there. I'm a Users microservice!";
+    }
+    
+    @GetMapping("/refresh")
+	@CacheEvict(value="users", allEntries=true)
+    public String refresh() {
+        return "Cache refresh was completed!";
     }
 
     @GetMapping(value="/users")
@@ -88,13 +95,15 @@ public class UsersController {
     @GetMapping(value="/user/{userId}")
     public ResponseEntity<UsersResponseModel> getUser(@PathVariable("userId") String userId) {
     	log.info("[UsersController.getUser]");
+        long startTime = System.currentTimeMillis();
     	
     	UsersEntity usersEntity = usersService.getUser(userId);
         
         ModelMapper modelMapper = new ModelMapper();
         modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
         UsersResponseModel userResponseModel = modelMapper.map(usersEntity, UsersResponseModel.class);
-        
+
+        log.info("[UsersController.getUser] Duration Time : " + (System.currentTimeMillis() - startTime) + "ms");        
         return ResponseEntity.status(HttpStatus.OK).body(userResponseModel);
     }
     
