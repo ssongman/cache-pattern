@@ -955,17 +955,21 @@ JDBC URL: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
 
 ## 1) 개요
 
-Spring에서 Cache를 사용하기 위한 추상화된 다앙한 기능을 제공한다. 
+Spring에서는 Cache를 사용하기 위한 추상화된 다앙한 기능을 제공한다. 
 
-그중 아래와 같은 기능을 살펴볼 것이다.
+캐시 특정 기술에 종속되지 않으며 AOP를 통해 적용되어 애플리케이션 코드를 수정하지 않고 캐시 부가기능을 추가할 수 있다.
 
-- Annotaiton 기반의 Cache 추상화 기능 제공
-
-- Repostory 기반의 Cache 추상화 기능 제공
-
-- Template 기반의 Cache 추상화 기능 제공
+즉, 캐시 API를 코드에 추가하지 않아도 손쉽게 캐시 기능을 부여할 수 있다.
 
 
+
+그 중 아래와 같은 기능을 살펴볼 것이다.
+
+- Annotation 기반의 Cache 추상화 기능 제공
+
+- Redis Repository 활용
+
+- RedisTemplate 활용
 
 
 
@@ -1137,6 +1141,8 @@ public class CacheConfig {
 # 7. Annotation을 통한 Caching 사용
 
 - Caching을 사용하기 위해 어노테이션을 사용하여 Caching 동작을 메서드에 바인딩할 수 있다.
+
+
 
 
 
@@ -2273,7 +2279,7 @@ import org.springframework.cache.CacheManager;
 
 
 
-# 8. Redis Repository을 통한 Caching 사용
+# 8. Redis Repository 활용
 
 - Spring Data Redis 의 Redis Repository 를 이용하면 간단하게 Domain Entity 를 Redis Hash 로 만들 수 있다.
 
@@ -2302,8 +2308,8 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
-@RedisHash(value = "catalog", timeToLive = 60L)
-public class CatalogDto {
+@RedisHash(value = "users", timeToLive = 60L)
+public class UsersDto {
 
 	private long id;
 
@@ -2342,7 +2348,7 @@ public class CatalogDto {
 
 ```
 @Repository
-public interface CatalogCacheRepository extends CrudRepository<CatalogDto, String> {
+public interface UsersCacheRepository extends CrudRepository<UsersDto, String> {
 }
 
 ```
@@ -2354,7 +2360,7 @@ public interface CatalogCacheRepository extends CrudRepository<CatalogDto, Strin
 ```java
 @Slf4j
 @SpringBootTest
-class CacheCatalogApplicationTests {
+class CacheUsersApplicationTests {
 
 	@Autowired
 	private CatalogCacheRepository repostiory;
@@ -2371,16 +2377,16 @@ class CacheCatalogApplicationTests {
 		
 		// 저장
 		repostiory.save(catalogDto);
-		
+        
 		// `keyspace:id` 값을 가져옴	
-		log.info("repostiory = {}",repostiory.findById(catalogDto.getProductId()));
+		log.info("[testRepo] repostiory = {}", repostiory.findById(usersDto.getUserId()));
 		
 		// CatalogDto Entity 의 @RedisHash 에 정의되어 있는 keyspace (catalog) 에 속한 키의 갯수를 구함
-		log.info("repostiory.count = {}",repostiory.count());
+		log.info("[testRepo] repostiory.count = {}", repostiory.count());		
         
 		// 삭제
 //		repostiory.delete(catalogDto);
-//		log.info("repostiory delete job was completed");
+//		log.info("[testRepo] repostiory delete job was completed");
 	}
 }
 
@@ -2394,7 +2400,7 @@ class CacheCatalogApplicationTests {
 
 
 
-# 9. RedisTemplate을 통한 Caching 사용
+# 9. RedisTemplate 활용
 
 - `RedisTemplate` 을 사용하면 특정 Entity 뿐만 아니라 여러가지 원하는 타입을 넣을 수 있다.
 
@@ -2403,34 +2409,6 @@ class CacheCatalogApplicationTests {
 
 
 ## 1) 설정
-
-
-```java
-@Configuration
-@RequiredArgsConstructor
-public class RedisConfig {
-
-    //고가용성 테스트를 위해 ShareNativeConnection 옵션 끔, 이럴경우 성능저하 일부 발생함
-	@Bean
-	public RedisConnectionFactory redisConnectionFactory() {
-		LettuceConnectionFactory lettuceConnectionFactory = new LettuceConnectionFactory();
-		lettuceConnectionFactory.setShareNativeConnection(false);
-		return lettuceConnectionFactory;
-	}
-
-    //키/밸류 시리얼라이저 지정
-	@Bean
-	public RedisTemplate<String, Object> redisTemplate() {
-		RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
-		redisTemplate.setConnectionFactory(redisConnectionFactory());
-        redisTemplate.setKeySerializer(new StringRedisSerializer());
-        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
-		return redisTemplate;
-	}
-
-```
-
-- `RedisTemplate` 에 `LettuceConnectionFactory` 을 적용해주기 위해 설정해준다.
 
 - Redis는 여러 자료 구조를 가지고 있다. 
 - 이런 여러 종류의 자료구조를 대응하기 위해 `RedisTemplate` 는 opsForValue, opsForSet, opsForZSet 등의 메서드를 제공한다. 
@@ -2464,17 +2442,17 @@ public class RedisConfig {
 		final ValueOperations<String, String> stringStringValueOperations = redisTemplate.opsForValue();
 
 		stringStringValueOperations.set(key, "1"); // redis set 명령어
+        
 		final String result_1 = stringStringValueOperations.get(key); // redis get 명령어
-
 		log.info("[testStrings] result_1 = {}", result_1);
 
 		stringStringValueOperations.increment(key); // redis incr 명령어
+        
 		final String result_2 = stringStringValueOperations.get(key);
-
 		log.info("[testStrings] result_2 = {}", result_2);
 	}
-//result_1 = 1
-//result_2 = 2
+//[testStrings] result_1 = 1
+//[testStrings] result_2 = 2
 ```
 
 
@@ -2500,38 +2478,32 @@ StringRedisTemplate redisTemplate;
 		stringStringListOperations.rightPush(key, "l");
 		stringStringListOperations.rightPush(key, "l");
 		stringStringListOperations.rightPush(key, "o");
-
-		stringStringListOperations.rightPushAll(key, " ", "s", "a", "b", "a");
+		stringStringListOperations.rightPushAll(key, " ", "w", "o", "r", "l", "d");
 
 		final String character_1 = stringStringListOperations.index(key, 1);
-
 		log.info("[testList] character_1 = {}", character_1);
 
-		final Long size = stringStringListOperations.size(key);
-
-		log.info("[testList] size = {}", size);
-
-		final List<String> ResultRange = stringStringListOperations.range(key, 0, 9);
-
-		log.info("[testList] ResultRange = ", Arrays.toString(ResultRange.toArray()));
-
+		log.info("[testList] size = {}", stringStringListOperations.size(key));
 		log.info("[testList] Left Pop = {}", stringStringListOperations.leftPop(key));
-
 		log.info("[testList] size = {}", stringStringListOperations.size(key));
 	}
-//character_1 = e
-//size = 10
-//ResultRange = [H, e, l, l, o,  , s, a, b, a]
+//[testList] character_1 = e
+//[testList] size = 11
+//[testList] Left Pop = H
+//[testList] size = 10
+
 ```
 
 
 
 ### 6.6.4 Set
 
+- SET 은 member 간 중복을 허용하지 않는다.
 - 데이터 존재 여부 확인에서 많이 사용한다.
 - **실습**
 
 ```java
+	
 	@Test
 	public void testSet() {
 		String key = "set";
@@ -2543,12 +2515,10 @@ StringRedisTemplate redisTemplate;
 		stringStringSetOperations.add(key, "l");
 		stringStringSetOperations.add(key, "o");
 
-		Set<String> sabarada = stringStringSetOperations.members(key);
-
-		log.info("[testSet] members = ", Arrays.toString(sabarada.toArray()));
+		Set<String> setMembers = stringStringSetOperations.members(key);
+		log.info("[testSet] members = ", Arrays.toString(setMembers.toArray()));
 
 		Long size = stringStringSetOperations.size(key);
-
 		log.info("[testSet] size = {}", size);
 
 		Cursor<String> cursor = stringStringSetOperations.scan(key,
@@ -2558,13 +2528,15 @@ StringRedisTemplate redisTemplate;
 			log.info("[testSet] cursor = {}", cursor.next());
 		}
 	}
-//members = [l, e, o, H]
-//size = 4
-//cursor = l
-//cursor = e
-//cursor = o
-//cursor = H
+//[testSet] members = 
+//[testSet] size = 4
+//[testSet] cursor = H
+//[testSet] cursor = o
+//[testSet] cursor = l
+//[testSet] cursor = e
 ```
+
+
 
 
 
@@ -2584,26 +2556,24 @@ StringRedisTemplate redisTemplate;
 		ZSetOperations<String, String> stringStringZSetOperations = redisTemplate.opsForZSet();
 
 		stringStringZSetOperations.add(key, "H", 1);
-		stringStringZSetOperations.add(key, "e", 5);
-		stringStringZSetOperations.add(key, "l", 10);
-		stringStringZSetOperations.add(key, "l", 15);
-		stringStringZSetOperations.add(key, "o", 20);
+		stringStringZSetOperations.add(key, "e", 2);
+		stringStringZSetOperations.add(key, "l", 3);
+		stringStringZSetOperations.add(key, "l", 4);
+		stringStringZSetOperations.add(key, "o", 5);
 
 		Set<String> range = stringStringZSetOperations.range(key, 0, 5);
-
 		log.info("[testSortedSet] range = {}", Arrays.toString(range.toArray()));
 
 		Long size = stringStringZSetOperations.size(key);
-
 		log.info("[testSortedSet] size = {}", size);
 
-		Set<String> scoreRange = stringStringZSetOperations.rangeByScore(key, 0, 13);
-
+		Set<String> scoreRange = stringStringZSetOperations.rangeByScore(key, 0, 3);
 		log.info("[testSortedSet] scoreRange = {}", Arrays.toString(scoreRange.toArray()));
 	}
-//range = [H, e, l, o]
-//size = 4
-//scoreRange = [H, e
+
+//[testSortedSet] range = [H, e, l, o]
+//[testSortedSet] size = 4
+//[testSortedSet] scoreRange = [H, e]
 ```
 
 
@@ -2615,34 +2585,30 @@ StringRedisTemplate redisTemplate;
 - **실습**
 
 ```java
+	
 	@Test
 	public void testHash() {
 		String key = "hash";
 
 		HashOperations<String, Object, Object> stringObjectObjectHashOperations = redisTemplate.opsForHash();
 
-		stringObjectObjectHashOperations.put(key, "Hello", "sabarada");
-		stringObjectObjectHashOperations.put(key, "Hello2", "sabarada2");
-		stringObjectObjectHashOperations.put(key, "Hello3", "sabarada3");
+		stringObjectObjectHashOperations.put(key, "subkey1", "data1");
+		stringObjectObjectHashOperations.put(key, "subkey2", "data2");
+		stringObjectObjectHashOperations.put(key, "subkey3", "data3");
 
-		Object hello = stringObjectObjectHashOperations.get(key, "Hello");
-
-		log.info("[testHash] hello = {}", hello);
+		Object data = stringObjectObjectHashOperations.get(key, "subkey1");
+		log.info("[testHash] subkey1 = {}", data);
 
 		Map<Object, Object> entries = stringObjectObjectHashOperations.entries(key);
-
-		log.info("[testHash] entries = {}", entries.get("Hello2"));
+		log.info("[testHash] entries subkey2 = {}", entries.get("subkey2"));
 
 		Long size = stringObjectObjectHashOperations.size(key);
-
 		log.info("[testHash] size = {}", size);
 	}
-//hello = sabarada
-//entries = sabarada2
-//size = 3
+	//[testHash] subkey1 = data1
+    //[testHash] entries subkey2 = data2
+    //[testHash] size = 3
 ```
-
-
 
 
 
